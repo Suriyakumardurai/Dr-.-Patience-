@@ -1,83 +1,108 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from groq import Groq
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
 from dotenv import load_dotenv
-import os, uuid, json
+from groq import Groq
+import uuid, os
 
-# Load .env variables
+from models import User, Session as ChatSession, Message
+from database import SessionLocal, init_db
+from auth import get_current_user
+
+# Load environment variables
 load_dotenv()
+init_db()
+
 app = FastAPI()
 
-# Enable CORS (for frontend)
+# CORS Configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Initialize Groq API client
+
+# Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Session history store
-chat_sessions = {}
-history_file = "chat_history.json"
-
-# Load old history
-if os.path.exists(history_file):
-    with open(history_file, "r") as f:
-        raw_data = json.load(f)
-        for sid, entry in raw_data.items():
-            if isinstance(entry, list):
-                # old format, migrate
-                chat_sessions[sid] = {
-                    "messages": entry,
-                    "title": next((m["content"] for m in entry if m["role"] == "user"), "Untitled Session")
-                }
-            else:
-                chat_sessions[sid] = entry
-
-# System prompt
+# Initial system prompt
 SYSTEM_PROMPT = {
     "role": "system",
-    "content": """You are a real human doctor speaking to a patient in a clinic. Your name is Dr.Suriya Kumar , Multi specialist doctor, Ask only one question at a time. Get straight to the point.
+    "content": """You are a real human doctor speaking to a patient in a clinic. Your name is Dr.Suriya Kumar, Multi specialist doctor. Ask only one question at a time. Get straight to the point.
 Don't comment on symptoms like “that sounds uncomfortable” or “that can be concerning.” Don't explain common sense things. Don't summarize what the patient just said.
 Ask focused questions like: “When did it start?”, “How bad is the pain?”, “Is it sharp or dull?”, “Have you had this before?”
 Your tone is calm, professional, and natural — like a doctor with 15+ years of experience. Use short, plain sentences. Don’t be dramatic or robotic.
 Once you've gathered enough info, summarize symptoms, suggest practical advice, and clearly state if the patient needs a doctor or emergency care."""
 }
 
-# Input model
-class Message(BaseModel):
+# Dependency for DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Request model
+class ChatRequest(BaseModel):
     session_id: str
     user_input: str
 
+# 🟢 Start a new chat session
 @app.post("/start")
-def start():
+def start_session(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = user["sub"]
+    
+    # Create user in DB if not exists
+    existing = db.query(User).filter(User.id == user_id).first()
+    if not existing:
+        new_user = User(id=user_id, name=user.get("email", "User"))
+        db.add(new_user)
+        db.commit()
+
     session_id = str(uuid.uuid4())
-    chat_sessions[session_id] = {
-        "messages": [SYSTEM_PROMPT],
-        "title": "Untitled Session"
-    }
-    save()
+    new_session = ChatSession(id=session_id, user_id=user_id)
+    db.add(new_session)
+    db.commit()
+
+    # Add system prompt
+    system_msg = Message(session_id=session_id, role="system", content=SYSTEM_PROMPT["content"])
+    db.add(system_msg)
+    db.commit()
+
     return {"session_id": session_id}
 
+# 🟢 Send chat message
 @app.post("/chat")
-def chat(message: Message):
-    session = chat_sessions.get(message.session_id)
+def chat(req: ChatRequest, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == req.session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    if session["title"] == "Untitled Session":
-        session["title"] = message.user_input.strip()[:50]
+    # Check session belongs to user
+    if session.user_id != user["sub"]:
+        raise HTTPException(status_code=403, detail="Unauthorized access to this session")
 
-    session["messages"].append({"role": "user", "content": message.user_input})
+    if session.title == "Untitled Session":
+        session.title = req.user_input.strip()[:50]
+        db.commit()
 
+    # Save user message
+    db.add(Message(session_id=req.session_id, role="user", content=req.user_input))
+    db.commit()
+
+    # Prepare full history
+    msgs = db.query(Message).filter(Message.session_id == req.session_id).all()
+    history = [{"role": m.role, "content": m.content} for m in msgs]
+
+    # Get AI response
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
-        messages=session["messages"],
+        messages=history,
         temperature=0.8,
         max_completion_tokens=512,
         top_p=1,
@@ -85,22 +110,32 @@ def chat(message: Message):
     )
 
     reply = response.choices[0].message.content.strip()
-    session["messages"].append({"role": "assistant", "content": reply})
-    save()
+
+    db.add(Message(session_id=req.session_id, role="assistant", content=reply))
+    db.commit()
 
     return {"response": reply}
 
+# 🟢 Get all sessions for the current user
 @app.get("/sessions")
-def list_sessions():
-    return [{"id": sid, "title": session.get("title", "Untitled Session")} for sid, session in chat_sessions.items()]
+def get_sessions(user=Depends(get_current_user), db: Session = Depends(get_db)):
+    user_id = user["sub"]
+    sessions = db.query(ChatSession).filter(ChatSession.user_id == user_id).all()
+    return [{"id": s.id, "title": s.title} for s in sessions]
 
+# 🟢 Get full chat history for a session
 @app.get("/history/{session_id}")
-def get_history(session_id: str):
-    session = chat_sessions.get(session_id)
+def get_history(session_id: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-    return {"history": session["messages"]}
+    if session.user_id != user["sub"]:
+        raise HTTPException(status_code=403, detail="Unauthorized access")
 
-def save():
-    with open(history_file, "w") as f:
-        json.dump(chat_sessions, f, indent=2)
+    messages = db.query(Message).filter(Message.session_id == session_id).all()
+    return {"history": [{"role": m.role, "content": m.content} for m in messages]}
+
+# 🔒 Test-protected route
+@app.get("/protected-route")
+def protected(user=Depends(get_current_user)):
+    return {"email": user["email"], "sub": user["sub"]}
