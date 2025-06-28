@@ -12,6 +12,9 @@ export default function App() {
   const [input, setInput] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
   const accessToken = auth.user?.access_token;
 
   const authHeader = {
@@ -52,6 +55,28 @@ export default function App() {
       setSidebarVisible(false);
     } catch (err) {
       console.error('Failed to load session history:', err);
+    }
+  };
+
+  const confirmDeleteSession = (id) => {
+    setPendingDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const deleteSession = async () => {
+    try {
+      await axios.delete(`http://localhost:8000/session/${pendingDeleteId}`, authHeader);
+      await loadSessions();
+      if (pendingDeleteId === sessionId) {
+        setSessionId('');
+        setChatHistory([]);
+        localStorage.removeItem('currentSessionId');
+      }
+      setPendingDeleteId(null);
+      setShowDeleteModal(false);
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+      alert('Error deleting session.');
     }
   };
 
@@ -143,12 +168,20 @@ export default function App() {
         </button>
         <div className="session-list">
           {[...sessions].reverse().map((s) => (
-            <div
-              key={s.id}
-              className={`session-item ${s.id === sessionId ? 'active' : ''}`}
-              onClick={() => loadSession(s.id)}
-            >
-              {s.title || `Session ${s.id.slice(0, 5)}`}
+            <div key={s.id} className={`session-item ${s.id === sessionId ? 'active' : ''}`}>
+              <span onClick={() => loadSession(s.id)} className="session-title">
+                {s.title || `Session ${s.id.slice(0, 5)}`}
+              </span>
+              <button
+                className="delete-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmDeleteSession(s.id);
+                }}
+                title="Delete"
+              >
+                🗑️
+              </button>
             </div>
           ))}
         </div>
@@ -189,6 +222,24 @@ export default function App() {
           <button type="submit">Send</button>
         </form>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h3>Delete Chat</h3>
+            <p>Are you sure you want to delete this session?</p>
+            <div className="modal-actions">
+              <button className="confirm" onClick={deleteSession}>
+                Yes, delete
+              </button>
+              <button className="cancel" onClick={() => setShowDeleteModal(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

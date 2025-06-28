@@ -299,3 +299,101 @@ body {
     padding: 10px;
   }
 }
+
+
+/* Session Item Delete Button */
+.session-item {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-right: 10px; /* space for button */
+  gap: 8px;
+}
+
+.session-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+/* Hide delete button initially */
+.session-item .delete-button {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-size: 16px;
+  cursor: pointer;
+  display: none;
+  padding: 2px 6px;
+  transition: background 0.2s ease;
+}
+
+/* Show button on hover */
+.session-item:hover .delete-button {
+  display: inline;
+}
+
+.session-item .delete-button:hover {
+  background-color: rgba(255, 107, 107, 0.15);
+  border-radius: 4px;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: #1e1e2f;
+  padding: 30px;
+  border-radius: 10px;
+  max-width: 350px;
+  width: 90%;
+  color: white;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.modal-box h3 {
+  margin-bottom: 10px;
+  font-size: 20px;
+  color: #ff6b6b;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 10px;
+}
+
+.modal-actions .confirm {
+  background: #ff6b6b;
+  border: none;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.modal-actions .cancel {
+  background: #333;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex: 1;
+}

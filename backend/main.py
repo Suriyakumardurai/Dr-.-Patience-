@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from groq import Groq
 import uuid, os
+from sqlalchemy import delete as sqlalchemy_delete
 
 from models import User, Session as ChatSession, Message
 from database import SessionLocal, init_db
@@ -116,6 +117,24 @@ def chat(req: ChatRequest, user=Depends(get_current_user), db: Session = Depends
     db.commit()
 
     return {"response": reply}
+
+@app.delete("/session/{session_id}")
+def delete_session(session_id: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != user["sub"]:
+        raise HTTPException(status_code=403, detail="Unauthorized access")
+
+    # Delete all messages first
+    db.query(Message).filter(Message.session_id == session_id).delete()
+
+    # Delete the session
+    db.delete(session)
+    db.commit()
+
+    return {"message": "Session deleted successfully"}
 
 # 🟢 Get all sessions for the current user
 @app.get("/sessions")
