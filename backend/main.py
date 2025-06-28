@@ -58,25 +58,36 @@ class ChatRequest(BaseModel):
 @app.post("/start")
 def start_session(user=Depends(get_current_user), db: Session = Depends(get_db)):
     user_id = user["sub"]
-    
-    # Create user in DB if not exists
-    existing = db.query(User).filter(User.id == user_id).first()
-    if not existing:
+
+    # Ensure user exists
+    existing_user = db.query(User).filter(User.id == user_id).first()
+    if not existing_user:
         new_user = User(id=user_id, name=user.get("email", "User"))
         db.add(new_user)
         db.commit()
 
+    # 🔁 Reuse untitled session if it exists
+    existing_session = db.query(ChatSession).filter(
+        ChatSession.user_id == user_id,
+        ChatSession.title == "Untitled Session"
+    ).first()
+
+    if existing_session:
+        return {"session_id": existing_session.id}
+
+    # 🔨 Create new session
     session_id = str(uuid.uuid4())
     new_session = ChatSession(id=session_id, user_id=user_id)
     db.add(new_session)
-    db.commit()
 
     # Add system prompt
     system_msg = Message(session_id=session_id, role="system", content=SYSTEM_PROMPT["content"])
     db.add(system_msg)
+
     db.commit()
 
     return {"session_id": session_id}
+
 
 # 🟢 Send chat message
 @app.post("/chat")

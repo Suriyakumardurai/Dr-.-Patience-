@@ -40,11 +40,13 @@ export default function App() {
       setChatHistory([]);
       localStorage.setItem('currentSessionId', newSessionId);
       await loadSessions();
+      await loadSession(newSessionId); // ⬅ optional: reload chat history for untitled
       setSidebarVisible(false);
     } catch (err) {
       console.error('Failed to start session:', err);
     }
   };
+
 
   const loadSession = async (id) => {
     try {
