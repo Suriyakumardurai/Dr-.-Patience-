@@ -1,0 +1,43 @@
+.formatted-doctor-response {
+  background-color: #1e1e2f;
+  padding: 16px;
+  border-radius: 14px;
+  color: #e2e2e2;
+  line-height: 1.6;
+  font-size: 15px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.formatted-doctor-response strong {
+  color: #f0f0ff;
+  font-weight: bold;
+}
+
+.formatted-doctor-response em {
+  color: #bbb;
+  font-style: italic;
+}
+
+.formatted-doctor-response p {
+  margin: 8px 0;
+}
+
+.formatted-doctor-response ul {
+  margin: 10px 0 10px 20px;
+  list-style-type: disc;
+}
+
+.formatted-doctor-response code {
+  background-color: #2a2a3c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.formatted-doctor-response h1,
+.formatted-doctor-response h2,
+.formatted-doctor-response h3 {
+  color: #aaccff;
+  margin: 10px 0 5px;
+}
