@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from 'react-oidc-context';
 import './App.css';
+import DoctorBubble from './DoctorBubble';
+import UserBubble from './UserBubble';
 
 export default function App() {
   const auth = useAuth();
@@ -11,12 +13,10 @@ export default function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [input, setInput] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(false);
-
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
   const accessToken = auth.user?.access_token;
-
   const authHeader = {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -40,13 +40,12 @@ export default function App() {
       setChatHistory([]);
       localStorage.setItem('currentSessionId', newSessionId);
       await loadSessions();
-      await loadSession(newSessionId); // ⬅ optional: reload chat history for untitled
+      await loadSession(newSessionId);
       setSidebarVisible(false);
     } catch (err) {
       console.error('Failed to start session:', err);
     }
   };
-
 
   const loadSession = async (id) => {
     try {
@@ -99,7 +98,6 @@ export default function App() {
         },
         authHeader
       );
-
       const botMsg = { role: 'assistant', content: res.data.response };
       setChatHistory((prev) => [...prev, botMsg]);
     } catch (err) {
@@ -206,13 +204,13 @@ export default function App() {
           {[...chatHistory]
             .filter((m) => m.role !== 'system')
             .reverse()
-            .map((msg, idx) => (
-              <div key={idx} className={`chat-message ${msg.role === 'user' ? 'user-message' : 'bot-message'}`}>
-                <div className="message-bubble">
-                  <strong>{msg.role === 'user' ? '👤 You' : '🤖 Doctor'}:</strong> {msg.content}
-                </div>
-              </div>
-            ))}
+            .map((msg, idx) =>
+              msg.role === 'user' ? (
+                <UserBubble key={idx} content={msg.content} />
+              ) : (
+                <DoctorBubble key={idx} content={msg.content} />
+              )
+            )}
         </div>
 
         <form className="input-box" onSubmit={sendMessage}>
