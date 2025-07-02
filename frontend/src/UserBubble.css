@@ -1,0 +1,10 @@
+.user-bubble {
+  background-color: #e0f7fa;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 6px 0;
+  align-self: flex-end;
+  max-width: 80%;
+  color: #004d40;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}

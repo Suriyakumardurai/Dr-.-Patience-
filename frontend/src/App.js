@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from 'react-oidc-context';
 import './App.css';
 import DoctorBubble from './DoctorBubble';
+import UserBubble from './UserBubble';
 
 export default function App() {
   const auth = useAuth();
@@ -205,11 +206,7 @@ export default function App() {
             .reverse()
             .map((msg, idx) =>
               msg.role === 'user' ? (
-                <div key={idx} className="chat-message user-message">
-                  <div className="message-bubble">
-                    <strong>👤 You:</strong> {msg.content}
-                  </div>
-                </div>
+                <UserBubble key={idx} content={msg.content} />
               ) : (
                 <DoctorBubble key={idx} content={msg.content} />
               )
