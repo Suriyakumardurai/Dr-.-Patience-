@@ -4,6 +4,7 @@ import { useAuth } from 'react-oidc-context';
 import './App.css';
 import DoctorBubble from './DoctorBubble';
 import UserBubble from './UserBubble';
+import { FaUserMd } from 'react-icons/fa';
 
 export default function App() {
   const auth = useAuth();
@@ -145,18 +146,37 @@ export default function App() {
     window.location.href = `${cognitoDomain}/logout?client_id=${clientId}&logout_uri=${encodeURIComponent(logoutUri)}`;
   };
 
-  if (auth.isLoading) return <div>Loading authentication...</div>;
+  if (auth.isLoading) {
+  return (
+    <div className="loading-screen">
+      <div className="spinner" />
+      <p className="loading-text">Logging you in Securely...</p>
+    </div>
+  );
+}
+
   if (auth.error) return <div>Error: {auth.error.message}</div>;
 
   if (!auth.isAuthenticated) {
-    return (
-      <div className="App">
-        <h1>🩺 AI Doctor Chat</h1>
-        <p>Please sign in to use the chat.</p>
-        <button onClick={() => auth.signinRedirect()}>🔐 Sign in with Cognito</button>
+  return (
+    <div className="login-container">
+      <div className="login-box">
+        <div className="login-icon">
+          <FaUserMd />
+        </div>
+        <h1>🩺 Welcome to Dr. Patience AI Clinic</h1>
+        <p>Please sign in to begin your consultation.</p>
+        <button onClick={() => auth.signinRedirect()} className="login-button">
+          🔐 Sign in with Cognito
+        </button>
+        <p className="login-footer">
+          Secure consultations available between <strong>12 PM – 12 AM IST</strong>.
+        </p>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
 
   return (
     <div className="app-container">
