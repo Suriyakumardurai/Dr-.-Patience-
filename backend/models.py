@@ -28,3 +28,11 @@ class Message(Base):
     content = Column(Text)
 
     session = relationship("Session", back_populates="messages")
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(String, primary_key=True, index=True)
+    user_id = Column(String, index=True)
+    title = Column(String, default="Untitled Session")
+    groq_key = Column(String, nullable=True)  # 👈 Add this line
