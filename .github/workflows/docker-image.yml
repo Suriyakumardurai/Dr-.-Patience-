@@ -34,7 +34,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./backend
-          file: ./backend/Dockerfile.backend   # adjust if filename differs
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/my-backend-image:latest
@@ -45,7 +44,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./frontend
-          file: ./frontend/Dockerfile.frontend  # adjust if filename differs
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/my-frontend-image:latest
