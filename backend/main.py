@@ -30,9 +30,6 @@ app.add_middleware(
 def get_random_groq_key():
     keys = [
         os.getenv("GROQ_API_KEY_1"),
-        os.getenv("GROQ_API_KEY_2"),
-        os.getenv("GROQ_API_KEY_3"),
-        os.getenv("GROQ_API_KEY_4"),
     ]
     valid_keys = [k for k in keys if k]
     if not valid_keys:
