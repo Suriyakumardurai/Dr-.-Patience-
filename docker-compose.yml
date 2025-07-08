@@ -6,23 +6,67 @@ services:
       context: ./backend
       dockerfile: Dockerfile.backend
     container_name: backend
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - GROQ_API_KEY_1=${GROQ_API_KEY_1}
     volumes:
       - ./backend:/app
     restart: always
+    networks:
+      - web
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
     container_name: frontend
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ./frontend:/app
     depends_on:
       - backend
     restart: always
+    networks:
+      - web
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+    networks:
+      - web
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+    entrypoint: >
+      sh -c "certbot certonly --webroot
+      --webroot-path=/var/lib/letsencrypt
+      --email suriyakumardurai.sk.in@gmail.com
+      --agree-tos
+      --no-eff-email
+      -d doctorai.duckdns.org"
+
+volumes:
+  certbot-etc:
+  certbot-var:
+
+networks:
+  web:
+    driver: bridge
