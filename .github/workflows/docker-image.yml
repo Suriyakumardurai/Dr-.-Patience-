@@ -48,3 +48,13 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/my-frontend-image:latest
             ${{ secrets.DOCKER_USERNAME }}/my-frontend-image:${{ steps.vars.outputs.SHA_SHORT }}
+
+      # Build and push nginx image
+      - name: Build and push nginx image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./nginx
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/my-nginx-image:latest
+            ${{ secrets.DOCKER_USERNAME }}/my-nginx-image:${{ steps.vars.outputs.SHA_SHORT }}
