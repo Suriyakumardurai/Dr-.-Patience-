@@ -5,7 +5,7 @@ import { AuthProvider } from "react-oidc-context";
 
 
 const cognitoAuthConfig = {
-  authority: "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_PiRQYrDB1", // ← this is critical
+  authority: "https://cognito-idp.ap-south-1.amazonaws.com/ap-south-1_PiRQYrDB1",
   client_id: "2mgl2q0crrj8a9eva5sbj1bi12",
   redirect_uri: "https://doctorai.duckdns.org",
   response_type: "code",
@@ -13,7 +13,6 @@ const cognitoAuthConfig = {
   loadUserInfo: true,
   automaticSilentRenew: true,
   onSigninCallback: () => {
-    // Clear the code/state from the URL
     window.history.replaceState({}, document.title, "/");
 }};
 
